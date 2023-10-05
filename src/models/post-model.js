@@ -10,6 +10,7 @@ const postSchema = new mongoose.Schema(
     likes_count: { type: Number, default: 0 },
     comments_count: { type: Number, default: 0 },
     user_id: { type: ObjectId, ref: "User" },
+    status: { type: Number, default: 1 },
   },
   { timestamps: true }
 );

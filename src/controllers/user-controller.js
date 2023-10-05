@@ -1,4 +1,5 @@
 const User = require("../models/user-model");
+const { successResponse, errorResponse } = require("../middleware/response");
 
 const followUser = async (req, res) => {
   try {
@@ -7,7 +8,7 @@ const followUser = async (req, res) => {
     const targetUser = await User.findById(targetUserId);
 
     if (!user || !targetUser) {
-      return res.status(404).json({ error: "User not found" });
+      return successResponse(res, 201, "User not found");
     }
     if (!user.followings.includes(targetUserId)) {
       user.followings.push(targetUserId);
@@ -16,17 +17,21 @@ const followUser = async (req, res) => {
       targetUser.followers.push(userId);
       await targetUser.save();
 
-      res.status(201).json({
-        message: `You are now following user with ID ${targetUserId}`,
-      });
+      successResponse(
+        res,
+        201,
+        `You are now following user with ID ${targetUserId}`
+      );
     } else {
-      res.status(400).json({
-        message: `You are already following user with ID ${targetUserId}`,
-      });
+      successResponse(
+        res,
+        400,
+        `You have already following user with ID ${targetUserId}`
+      );
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
@@ -36,7 +41,7 @@ const unfollowUser = async (req, res) => {
     const user = await User.findById(userId);
     const targetUser = await User.findById(targetUserId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      errorResponse(res, 404, "User not found");
     }
     if (user.followings.includes(targetUserId)) {
       user.followings = user.followings.filter(
@@ -47,26 +52,75 @@ const unfollowUser = async (req, res) => {
       targetUser.followers.pop(userId);
       await targetUser.save();
 
-      return res
-        .status(201)
-        .json({ message: `You have unfollowed user with ID: ${targetUserId}` });
+      successResponse(
+        res,
+        201,
+        `You have unfollowed user with ID: ${targetUserId}`
+      );
     } else {
-      return res
-        .status(400)
-        .json({ message: `You have unfollowed user with ID: ${targetUserId}` });
+      successResponse(
+        res,
+        400,
+        `You have unfollowed user with ID: ${targetUserId}`
+      );
     }
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
 const getUser = async (req, res) => {
   try {
     const user = await User.findOne({ name: req.body.name });
-    res.status(200).json({ user });
+    successResponse(res, 200, user);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    errorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    const existingUser = req.user;
+    const { name, email, newPassword } = req.body;
+    if (!existingUser) {
+      errorResponse(res, 404, "User not found");
+    }
+
+    if (name) {
+      existingUser.name = name;
+    }
+    if (email) {
+      existingUser.email = email;
+    }
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      existingUser.password = hashedPassword;
+    }
+
+    await existingUser.save();
+
+    successResponse(res, 200, "User profile updated successfully", user);
+  } catch (error) {
+    console.error(error);
+    errorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      errorResponse(res, 404, "User not found");
+    }
+
+    await User.findByIdAndDelete(user._id);
+
+    successResponse(res, 200, "User account deleted successfully");
+  } catch (error) {
+    console.error(error);
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
@@ -74,4 +128,6 @@ module.exports = {
   followUser,
   unfollowUser,
   getUser,
+  updateUser,
+  deleteUser,
 };

@@ -1,6 +1,7 @@
 const Comment = require("../models/comment-model");
 const Post = require("../models/post-model");
 require("../models/user-model");
+const { successResponse, errorResponse } = require("../middleware/response");
 
 const createComment = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ const createComment = async (req, res) => {
     const { description, user_id } = req.body;
     const post = await Post.findById(postId);
     if (!post) {
-      return res.status(404).json({ message: "Post not found" });
+      errorResponse(res, 404, "Post not found");
     }
     const newComment = new Comment({
       description,
@@ -20,11 +21,11 @@ const createComment = async (req, res) => {
 
     await newComment.save();
     await post.save();
-    
-    res.status(201).json({ message: "Comment created", comment: newComment });
+
+    successResponse(res, 201, "Comment created", newComment);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
@@ -32,16 +33,16 @@ const getCommentsForPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
-      return res.status(404).json({ message: "Post not found" });
+      errorResponse(res, 404, "Post not found");
     }
     const comments = await Comment.find({ post: req.params.id }).populate(
       "user_id",
       "name"
     );
-    res.status(200).json({ comments });
+    successResponse(res, 200, comments);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
@@ -49,13 +50,13 @@ const deleteComment = async (req, res) => {
   try {
     const comment = await Comment.findOneAndDelete(req.params.id);
     if (!comment) {
-      return res.status(404).json({ error: "Comment not found" });
+      errorResponse(res, 404, "Comment not found");
     } else {
-      return res.status(200).json({ message: "Comment deleted" });
+      successResponse(res, 200, "Comment deleted");
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 

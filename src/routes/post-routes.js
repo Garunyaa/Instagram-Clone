@@ -1,5 +1,6 @@
 const express = require("express");
 const postController = require("../controllers/post-controller");
+const authenticateToken = require("../middleware/auth-middleware");
 const router = express.Router();
 
 router.post("/createpost/:id", postController.createPost);
