@@ -1,8 +1,8 @@
-const Post = require("../models/post-model");
-const User = require("../models/user-model");
-const { successResponse, errorResponse } = require("../middleware/response");
+import { Post } from "../models/post-model";
+import { User } from "../models/user-model";
+import { successResponse, errorResponse } from "../middleware/response";
 
-const createPost = async (req, res) => {
+export const createPost = async (req, res) => {
   const { file, file_type, description, tags, user_id } = req.body;
   try {
     const user = await User.findById(req.params.id);
@@ -19,32 +19,38 @@ const createPost = async (req, res) => {
 
     await newPost.save();
 
-    successResponse(res, 201, newPost);
+    successResponse(res, 201, "Post created");
   } catch (error) {
-    errorResponse(res, 500, error);
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const updatePost = async (req, res) => {
+export const updatePost = async (req, res) => {
   const { description, tags } = req.body;
   try {
-    const existingPost = await Post.findById(req.params.id);
-    if (!existingPost) {
+    const updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      {
+        description: description || undefined,
+        tags: tags || undefined,
+      },
+      {
+        new: true,
+      }
+    );
+    if (!updatedPost) {
       errorResponse(res, 404, "Post not found");
+      return;
     }
-    existingPost.description = description || existingPost.description;
-    existingPost.tags = tags || existingPost.tags;
 
-    await existingPost.save();
-
-    successResponse(res, 200, existingPost);
+    successResponse(res, 200, "Post updated");
   } catch (error) {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const deletePost = async (req, res) => {
+export const deletePost = async (req, res) => {
   try {
     const existingPost = await Post.findByIdAndDelete(req.params.id);
     if (!existingPost) {
@@ -58,7 +64,7 @@ const deletePost = async (req, res) => {
   }
 };
 
-const getAllPosts = async (req, res) => {
+export const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.find().populate("user_id", "name");
     successResponse(res, 200, posts);
@@ -66,11 +72,4 @@ const getAllPosts = async (req, res) => {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
-};
-
-module.exports = {
-  createPost,
-  updatePost,
-  deletePost,
-  getAllPosts,
 };

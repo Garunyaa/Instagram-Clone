@@ -1,9 +1,8 @@
-const Comment = require("../models/comment-model");
-const Post = require("../models/post-model");
-require("../models/user-model");
-const { successResponse, errorResponse } = require("../middleware/response");
+import { Comment } from "../models/comment-model";
+import { Post } from "../models/post-model";
+import { successResponse, errorResponse } from "../middleware/response";
 
-const createComment = async (req, res) => {
+export const createComment = async (req, res) => {
   try {
     const postId = req.params.id;
     const { description, user_id } = req.body;
@@ -22,31 +21,31 @@ const createComment = async (req, res) => {
     await newComment.save();
     await post.save();
 
-    successResponse(res, 201, "Comment created", newComment);
+    successResponse(res, 201, "Comment created");
   } catch (error) {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const getCommentsForPost = async (req, res) => {
+export const getCommentsForPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
-      errorResponse(res, 404, "Post not found");
+      return errorResponse(res, 404, "Post not found");
     }
-    const comments = await Comment.find({ post: req.params.id }).populate(
-      "user_id",
-      "name"
-    );
-    successResponse(res, 200, comments);
+    const comments = await Comment.find({ post_id: req.params.id }).select({
+      "description": 1,
+      "user_id": 1,
+    });
+    return successResponse(res, 200, { comments });
   } catch (error) {
     console.error(error);
-    errorResponse(res, 500, "Internal Server Error");
+    return errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const deleteComment = async (req, res) => {
+export const deleteComment = async (req, res) => {
   try {
     const comment = await Comment.findOneAndDelete(req.params.id);
     if (!comment) {
@@ -58,10 +57,4 @@ const deleteComment = async (req, res) => {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
-};
-
-module.exports = {
-  createComment,
-  getCommentsForPost,
-  deleteComment,
 };

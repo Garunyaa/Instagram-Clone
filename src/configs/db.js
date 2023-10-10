@@ -1,7 +1,8 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
 
-const connectDB = () =>
+export const connectDB = () =>
   mongoose
     .connect(process.env.MONGO_URL, {
       useNewUrlParser: true,
@@ -13,5 +14,3 @@ const connectDB = () =>
     .catch((error) => {
       console.log("Connection failed", error);
     });
-
-module.exports = connectDB;

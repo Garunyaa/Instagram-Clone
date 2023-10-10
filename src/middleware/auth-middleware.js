@@ -1,7 +1,7 @@
-const jwt = require("jsonwebtoken");
-const { errorResponse } = require("../middleware/response");
+import jwt from "jsonwebtoken";
+import { errorResponse } from "../middleware/response";
 
-const authenticateToken = async (req, res, next) => {
+export const authenticateToken = async (req, res, next) => {
   const token = req.header("Authorization");
 
   if (!token) {
@@ -16,5 +16,3 @@ const authenticateToken = async (req, res, next) => {
     next();
   });
 };
-
-module.exports = authenticateToken;

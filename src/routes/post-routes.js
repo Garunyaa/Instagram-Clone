@@ -1,11 +1,15 @@
-const express = require("express");
-const postController = require("../controllers/post-controller");
-const authenticateToken = require("../middleware/auth-middleware");
+import express from "express";
+import {
+  createPost,
+  updatePost,
+  deletePost,
+  getAllPosts,
+} from "../controllers/post-controller";
 const router = express.Router();
 
-router.post("/createpost/:id", postController.createPost);
-router.put("/updatepost/:id", postController.updatePost);
-router.delete("/deletepost/:id", postController.deletePost);
-router.get("/getAllPosts", postController.getAllPosts);
+router.post("/createpost/:id", createPost);
+router.patch("/updatepost/:id", updatePost);
+router.delete("/deletepost/:id", deletePost);
+router.get("/getAllPosts", getAllPosts);
 
-module.exports = router;
+export default router;

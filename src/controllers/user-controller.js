@@ -1,133 +1,205 @@
-const User = require("../models/user-model");
-const { successResponse, errorResponse } = require("../middleware/response");
+import bcrypt from "bcrypt";
+import { User } from "../models/user-model";
+import { successResponse, errorResponse } from "../middleware/response";
 
-const followUser = async (req, res) => {
+// follow user
+
+export const followUser = async (req, res) => {
   try {
-    const { userId, targetUserId } = req.body;
-    const user = await User.findById(userId);
-    const targetUser = await User.findById(targetUserId);
+    const { user_id, target_userId } = req.body;
+    const user = await User.findById(user_id);
+    const targetUser = await User.findById(target_userId);
 
     if (!user || !targetUser) {
-      return successResponse(res, 201, "User not found");
+      return errorResponse(res, 400, "User not found");
     }
-    if (!user.followings.includes(targetUserId)) {
-      user.followings.push(targetUserId);
-      await user.save();
 
-      targetUser.followers.push(userId);
-      await targetUser.save();
+    if (user_id === target_userId) {
+      return errorResponse(res, 400, "You can't follow yourself");
+    }
 
-      successResponse(
-        res,
-        201,
-        `You are now following user with ID ${targetUserId}`
-      );
-    } else {
-      successResponse(
+    if (user.followings.includes(target_userId)) {
+      return successResponse(
         res,
         400,
-        `You have already following user with ID ${targetUserId}`
+        `You have already followed user with ID ${target_userId}`
+      );
+    }
+
+    user.followings.push(target_userId);
+    targetUser.followers.push(user_id);
+
+    const updateUser = await User.findByIdAndUpdate(
+      user_id,
+      { followings: user.followings },
+      { new: true }
+    );
+
+    const updateTargetUser = await User.findByIdAndUpdate(
+      target_userId,
+      { followers: targetUser.followers },
+      { new: true }
+    );
+
+    if (updateUser && updateTargetUser) {
+      return successResponse(
+        res,
+        201,
+        `You are now following user with ID ${target_userId}`
+      );
+    } else {
+      return errorResponse(
+        res,
+        400,
+        `Failed to follow user with ID ${target_userId}`
       );
     }
   } catch (error) {
     console.error(error);
-    errorResponse(res, 500, "Internal Server Error");
+    return errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const unfollowUser = async (req, res) => {
+// unfollow user
+
+export const unfollowUser = async (req, res) => {
   try {
-    const { userId, targetUserId } = req.body;
-    const user = await User.findById(userId);
-    const targetUser = await User.findById(targetUserId);
+    const { user_id, target_userId } = req.body;
+    const user = await User.findById(user_id);
+    const targetUser = await User.findById(target_userId);
+
+    if (!user || !targetUser) {
+      return errorResponse(res, 400, "User not found");
+    }
+
+    if (!user.followings.includes(target_userId)) {
+      return successResponse(
+        res,
+        400,
+        `You are not following user with ID ${target_userId}`
+      );
+    }
+
+    if (user.followings.includes(target_userId)) {
+      user.followings.pop(target_userId);
+
+      const updateUser = await User.findByIdAndUpdate(
+        user_id,
+        { followings: user.followings },
+        { new: true }
+      );
+
+      if (targetUser.followers.includes(user_id)) {
+        targetUser.followers.pop(user_id);
+
+        const updateTargetUser = await User.findByIdAndUpdate(
+          target_userId,
+          { followers: targetUser.followers },
+          { new: true }
+        );
+
+        if (updateUser && updateTargetUser) {
+          return successResponse(
+            res,
+            201,
+            `You have unfollowed user with ID: ${target_userId}`
+          );
+        } else {
+          return errorResponse(
+            res,
+            400,
+            `Failed to unfollow user with ID: ${target_userId}`
+          );
+        }
+      } else {
+        return errorResponse(
+          res,
+          400,
+          `You have already unfollowed user with ID: ${target_userId}`
+        );
+      }
+    }
+  } catch (error) {
+    return errorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+//get user
+
+export const getUser = async (req, res) => {
+  try {
+    const user = await User.findOne(req.params.id);
     if (!user) {
-      errorResponse(res, 404, "User not found");
+      return errorResponse(res, 400, "User not found");
     }
-    if (user.followings.includes(targetUserId)) {
-      user.followings = user.followings.filter(
-        (id) => id.toString() !== targetUserId.toString()
-      );
-      await user.save();
-
-      targetUser.followers.pop(userId);
-      await targetUser.save();
-
-      successResponse(
-        res,
-        201,
-        `You have unfollowed user with ID: ${targetUserId}`
-      );
-    } else {
-      successResponse(
-        res,
-        400,
-        `You have unfollowed user with ID: ${targetUserId}`
-      );
-    }
-  } catch (error) {
-    errorResponse(res, 500, "Internal Server Error");
-  }
-};
-
-const getUser = async (req, res) => {
-  try {
-    const user = await User.findOne({ name: req.body.name });
-    successResponse(res, 200, user);
+    successResponse(res, 200, { user });
   } catch (error) {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const updateUser = async (req, res) => {
+// update user
+
+export const updateUser = async (req, res) => {
   try {
-    const existingUser = req.user;
-    const { name, email, newPassword } = req.body;
+    const existingUser = await User.findById(req.params.id);
+
     if (!existingUser) {
-      errorResponse(res, 404, "User not found");
+      return errorResponse(res, 404, "User not found");
     }
+
+    const { name, email, new_password } = req.body;
+
+    const updatedFields = {};
 
     if (name) {
-      existingUser.name = name;
+      updatedFields.name = name;
     }
     if (email) {
-      existingUser.email = email;
+      updatedFields.email = email;
     }
-    if (newPassword) {
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      existingUser.password = hashedPassword;
+    if (new_password) {
+      const hashedPassword = await bcrypt.hash(new_password, 10);
+      updatedFields.password = hashedPassword;
     }
 
-    await existingUser.save();
+    const updatedUser = await User.findByIdAndUpdate(
+      existingUser._id,
+      updatedFields,
+      { new: true }
+    );
 
-    successResponse(res, 200, "User profile updated successfully", user);
+    if (updatedUser) {
+      return successResponse(res, 200, "User profile updated successfully");
+    } else {
+      return errorResponse(res, 400, "Failed to update user profile");
+    }
   } catch (error) {
     console.error(error);
-    errorResponse(res, 500, "Internal Server Error");
+    return errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const deleteUser = async (req, res) => {
+// delete user
+
+export const deleteUser = async (req, res) => {
   try {
-    const user = req.user;
+    const user = await User.findById(req.params.id);
 
     if (!user) {
-      errorResponse(res, 404, "User not found");
+      return errorResponse(res, 404, "User not found");
     }
 
-    await User.findByIdAndDelete(user._id);
+    const deletedUser = await User.findByIdAndDelete(user._id);
 
-    successResponse(res, 200, "User account deleted successfully");
+    if (deletedUser) {
+      return successResponse(res, 200, "User account deleted successfully");
+    } else {
+      return errorResponse(res, 400, "Failed to delete user account");
+    }
   } catch (error) {
     console.error(error);
-    errorResponse(res, 500, "Internal Server Error");
+    return errorResponse(res, 500, "Internal Server Error");
   }
-};
-
-module.exports = {
-  followUser,
-  unfollowUser,
-  getUser,
-  updateUser,
-  deleteUser,
 };

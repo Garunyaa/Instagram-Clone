@@ -1,9 +1,14 @@
-const express = require("express");
+import express from "express";
+import {
+  createComment,
+  getCommentsForPost,
+  deleteComment,
+} from "../controllers/comment-controller";
+
 const router = express.Router();
-const commentController = require("../controllers/comment-controller");
 
-router.post("/createcomment/:id", commentController.createComment);
-router.get("/getcomments/:id", commentController.getCommentsForPost);
-router.delete("/deletecomment/:id", commentController.deleteComment);
+router.post("/createcomment/:id", createComment);
+router.get("/getcomments/:id", getCommentsForPost);
+router.delete("/deletecomment/:id", deleteComment);
 
-module.exports = router;
+export default router;

@@ -1,14 +1,12 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
-const User = require("../models/user-model");
-const { successResponse, errorResponse } = require("../middleware/response");
-const sendMail = require("../services/send-email");
-
-const dotenv = require("dotenv");
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { User } from "../models/user-model";
+import { successResponse, errorResponse } from "../middleware/response";
+import { mailSender } from "../services/send-email";
+import dotenv from "dotenv";
 dotenv.config();
 
-const signup = async (req, res) => {
+export const signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!email || !password || !name) {
@@ -30,13 +28,13 @@ const signup = async (req, res) => {
 
     await user.save();
 
-    successResponse(res, 201, "Saved successfully", user);
+    successResponse(res, 201, "Saved successfully");
   } catch (error) {
-    errorResponse(res, 400, error);
+    errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const login = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -46,8 +44,8 @@ const login = async (req, res) => {
     if (!savedUser) {
       errorResponse(res, 401, "Invalid email or password");
     }
-    const match = await bcrypt.compare(password, savedUser.password);
-    if (match) {
+    const passwordMatch = await bcrypt.compare(password, savedUser.password);
+    if (passwordMatch) {
       successResponse(res, 200, "Login Successful");
     } else {
       errorResponse(res, 401, "Invalid email or password");
@@ -58,7 +56,7 @@ const login = async (req, res) => {
   }
 };
 
-const forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (!user) {
@@ -71,22 +69,22 @@ const forgotPassword = async (req, res) => {
     const subject = "Password reset";
     const text = `Your OTP for reset password is ${otp}`;
 
-    await sendMail(user.email, subject, text);
-    successResponse(res, 200, "Check your email for a password reset OTP");
+    await mailSender(user.email, subject, text);
+    successResponse(res, 200, `OTP generated successfully, ${otp}`);
   } catch (error) {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
 };
 
-const resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email, otp, new_password } = req.body;
     const user = await User.findOne({ email, otp });
     if (!user) {
       errorResponse(res, 404, "Invalid email or OTP");
     }
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(new_password, 10);
     user.password = hashedPassword;
     user.otp = null;
     await user.save();
@@ -96,11 +94,4 @@ const resetPassword = async (req, res) => {
     console.error(error);
     errorResponse(res, 500, "Internal Server Error");
   }
-};
-
-module.exports = {
-  signup,
-  login,
-  forgotPassword,
-  resetPassword,
 };
